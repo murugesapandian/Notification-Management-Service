@@ -1,8 +1,10 @@
 package com.schwab.nms.api.controller;
 
+import com.schwab.nms.api.dto.AcknowledgeRequest;
 import com.schwab.nms.api.dto.NotificationRequest;
 import com.schwab.nms.api.dto.NotificationResponse;
 import com.schwab.nms.api.dto.NotificationStatusResponse;
+import com.schwab.nms.application.AcknowledgementService;
 import com.schwab.nms.application.NotificationStatusService;
 import com.schwab.nms.application.NotificationSubmissionResult;
 import com.schwab.nms.application.NotificationSubmissionService;
@@ -12,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -25,11 +28,14 @@ public class NotificationController {
 
     private final NotificationSubmissionService submissionService;
     private final NotificationStatusService statusService;
+    private final AcknowledgementService acknowledgementService;
 
     public NotificationController(NotificationSubmissionService submissionService,
-                                   NotificationStatusService statusService) {
+                                   NotificationStatusService statusService,
+                                   AcknowledgementService acknowledgementService) {
         this.submissionService = submissionService;
         this.statusService = statusService;
+        this.acknowledgementService = acknowledgementService;
     }
 
     @PostMapping
@@ -69,5 +75,33 @@ public class NotificationController {
     public ResponseEntity<NotificationStatusResponse> getStatus(@PathVariable UUID notificationId) {
         NotificationStatusService.NotificationStatusView view = statusService.getStatus(notificationId);
         return ResponseEntity.ok(NotificationStatusResponse.from(view.notification(), view.deliveryAttempts()));
+    }
+
+    private static final int ACKNOWLEDGE_MAX_ATTEMPTS = 3;
+
+    @PostMapping("/{notificationId}/acknowledge")
+    @Operation(summary = "Acknowledge a notification",
+            description = "Ambiguous-requirement scenario (docs/scenarios/03-ambiguous-requirements.md): "
+                    + "explicit human/on-call acknowledgement, distinct from delivery success. First "
+                    + "acknowledgement wins and prevents escalation of a CRITICAL notification.")
+    public ResponseEntity<NotificationStatusResponse> acknowledge(@PathVariable UUID notificationId,
+                                                                    @Valid @RequestBody AcknowledgeRequest request) {
+        // The Notification row is also written by the async routing orchestration
+        // (NotificationSubmittedEventListener) and, for CRITICAL notifications, by
+        // EscalationJob. An acknowledge call landing in that same narrow window can
+        // lose the optimistic-locking (@Version) race. Retrying a few times at this
+        // API boundary is safe because acknowledge() is naturally idempotent — see
+        // AcknowledgementService's "first acknowledgement wins" javadoc.
+        ObjectOptimisticLockingFailureException lastConflict = null;
+        for (int attempt = 1; attempt <= ACKNOWLEDGE_MAX_ATTEMPTS; attempt++) {
+            try {
+                acknowledgementService.acknowledge(notificationId, request.acknowledgedBy());
+                NotificationStatusService.NotificationStatusView view = statusService.getStatus(notificationId);
+                return ResponseEntity.ok(NotificationStatusResponse.from(view.notification(), view.deliveryAttempts()));
+            } catch (ObjectOptimisticLockingFailureException e) {
+                lastConflict = e;
+            }
+        }
+        throw lastConflict;
     }
 }

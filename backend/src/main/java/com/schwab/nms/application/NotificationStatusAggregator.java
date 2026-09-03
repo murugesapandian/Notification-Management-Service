@@ -41,8 +41,13 @@ public class NotificationStatusAggregator {
                 .orElseThrow(() -> new NoSuchElementException("Notification not found: " + notificationId));
 
         // Escalated/expired/rejected/duplicate-suppressed are terminal and not recomputed here.
+        // ESCALATED in particular must not be overwritten once EscalationJob sets it: dispatching
+        // the escalation's own DeliveryAttempt through the normal pipeline would otherwise flip the
+        // notification straight back to DELIVERED/PARTIALLY_DELIVERED and erase the "this needed
+        // human escalation" signal (docs/scenarios/03-ambiguous-requirements.md).
         if (notification.getOverallStatus() == NotificationStatus.EXPIRED
-                || notification.getOverallStatus() == NotificationStatus.REJECTED) {
+                || notification.getOverallStatus() == NotificationStatus.REJECTED
+                || notification.getOverallStatus() == NotificationStatus.ESCALATED) {
             return;
         }
 

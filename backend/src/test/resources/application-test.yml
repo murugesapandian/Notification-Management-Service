@@ -18,7 +18,9 @@ nms:
     max-delay-seconds: 5
   escalation:
     poll-interval-ms: 500
-    unacknowledged-critical-threshold-minutes: 15
+    # 0 (vs. the 15-minute production default) so integration tests observe
+    # escalation within a couple of poll cycles instead of waiting real minutes.
+    unacknowledged-critical-threshold-minutes: 0
     escalation-recipient-id: oncall-escalation-group
     escalation-channel: SLACK
 

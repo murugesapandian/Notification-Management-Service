@@ -1,5 +1,6 @@
 package com.schwab.nms.api;
 
+import com.schwab.nms.api.dto.AcknowledgeRequest;
 import com.schwab.nms.api.dto.NotificationRequest;
 import com.schwab.nms.api.dto.NotificationResponse;
 import com.schwab.nms.api.dto.NotificationStatusResponse;
@@ -144,6 +145,46 @@ class NotificationApiIT {
             assertThat(statusResponse.getBody().overallStatus()).isEqualTo(NotificationStatus.DELIVERED);
             assertThat(statusResponse.getBody().selectedChannels()).containsExactly(Channel.SLACK);
         });
+    }
+
+    @Test
+    void unacknowledgedCriticalNotificationGetsEscalated() {
+        NotificationRequest request = baseRequest("user-escalation-target", List.of(Channel.EMAIL), Severity.CRITICAL, null);
+
+        ResponseEntity<NotificationResponse> submitResponse = restTemplate.postForEntity(baseUrl(), request, NotificationResponse.class);
+        UUID notificationId = submitResponse.getBody().notificationId();
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ResponseEntity<NotificationStatusResponse> statusResponse =
+                    restTemplate.getForEntity(baseUrl() + "/" + notificationId, NotificationStatusResponse.class);
+            assertThat(statusResponse.getBody().escalatedAt()).isNotNull();
+            assertThat(statusResponse.getBody().overallStatus()).isEqualTo(NotificationStatus.ESCALATED);
+            assertThat(statusResponse.getBody().deliveries())
+                    .anyMatch(d -> d.recipientId().equals("oncall-escalation-group") && d.channel() == Channel.SLACK);
+        });
+    }
+
+    @Test
+    void acknowledgingACriticalNotificationPreventsEscalation() throws InterruptedException {
+        NotificationRequest request = baseRequest("user-ack", List.of(Channel.EMAIL), Severity.CRITICAL, null);
+
+        ResponseEntity<NotificationResponse> submitResponse = restTemplate.postForEntity(baseUrl(), request, NotificationResponse.class);
+        UUID notificationId = submitResponse.getBody().notificationId();
+
+        ResponseEntity<NotificationStatusResponse> ackResponse = restTemplate.postForEntity(
+                baseUrl() + "/" + notificationId + "/acknowledge",
+                new AcknowledgeRequest("oncall.jane"), NotificationStatusResponse.class);
+        assertThat(ackResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(ackResponse.getBody().acknowledgedAt()).isNotNull();
+
+        // Give the escalation poller (500ms interval, 0-minute test threshold) several
+        // chances to run, then confirm it correctly skipped this acknowledged notification.
+        Thread.sleep(2000);
+
+        ResponseEntity<NotificationStatusResponse> statusResponse =
+                restTemplate.getForEntity(baseUrl() + "/" + notificationId, NotificationStatusResponse.class);
+        assertThat(statusResponse.getBody().escalatedAt()).isNull();
+        assertThat(statusResponse.getBody().overallStatus()).isNotEqualTo(NotificationStatus.ESCALATED);
     }
 
     @Test

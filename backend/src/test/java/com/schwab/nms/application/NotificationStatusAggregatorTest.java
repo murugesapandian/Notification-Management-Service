@@ -125,4 +125,14 @@ class NotificationStatusAggregatorTest {
         verify(deliveryAttemptRepository, never()).findByNotificationId(any());
         assertThat(notification.getOverallStatus()).isEqualTo(NotificationStatus.EXPIRED);
     }
+
+    @Test
+    void doesNotOverwriteEscalatedStatusWhenTheEscalationAttemptItselfIsDispatched() {
+        notification.setOverallStatus(NotificationStatus.ESCALATED);
+
+        aggregator.refresh(notificationId);
+
+        verify(deliveryAttemptRepository, never()).findByNotificationId(any());
+        assertThat(notification.getOverallStatus()).isEqualTo(NotificationStatus.ESCALATED);
+    }
 }
