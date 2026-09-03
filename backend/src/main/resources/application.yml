@@ -2,15 +2,27 @@ spring:
   application:
     name: notification-management-service
 
+  # Demo/dev default: file-based SQLite so data survives an app restart (H2's in-memory
+  # default did not). This is explicitly a demo-purposes choice, not a production one — see
+  # docs/architecture-overview.md §2 and application-postgres.yml for the production path.
+  # foreign_keys=on because SQLite disables FK enforcement (and therefore ON DELETE CASCADE)
+  # per-connection by default.
   datasource:
-    url: jdbc:h2:mem:nms;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
+    url: jdbc:sqlite:${nms.sqlite.file:./data/nms.db}?foreign_keys=on
+    driver-class-name: org.sqlite.JDBC
+    username: ""
     password: ""
 
   jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    # SQLite's dynamic typing means the JDBC driver reports column metadata loosely (e.g.
+    # UUID/TIMESTAMP/BOOLEAN columns all come back with approximate affinities), which trips
+    # Hibernate's schema validator with false-positive mismatches even though the schema
+    # (owned by Flyway, see db/migration) is correct and the app works. Validation stays
+    # strict on the H2 test profile and the Postgres prod profile; here it's a deliberate,
+    # documented gap, not an oversight.
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
     properties:
       hibernate:
@@ -21,11 +33,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
 server:
   port: 8080

@@ -121,5 +121,7 @@ than being pro forma:
 - Swagger UI (`/swagger-ui.html`) used to hand-drive the API during development and confirm the
   generated OpenAPI schema matches the DTOs' Bean Validation annotations.
 - `curl` walkthroughs in `EXECUTION_GUIDE.md` double as a manual smoke test script.
-- H2 console (`/h2-console`, dev/test only) used to inspect actual row states
-  (`delivery_attempts.status`, `next_retry_at`) while diagnosing the two bugs above.
+- The H2 console was used to inspect actual row states (`delivery_attempts.status`,
+  `next_retry_at`) while diagnosing the two bugs above, back when H2 was the default dev
+  profile. The default profile now runs on SQLite (see architecture doc §2a); the equivalent
+  today is `sqlite3 backend/data/nms.db` or a SQLite GUI browser, per `EXECUTION_GUIDE.md`.

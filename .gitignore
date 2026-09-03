@@ -4,6 +4,13 @@ backend/target/
 *.jar
 !.mvn/wrapper/maven-wrapper.jar
 
+# Demo SQLite database (runtime data, not source — see application.yml)
+backend/data/*.db
+backend/data/*.db-journal
+backend/data/*.db-wal
+backend/data/*.db-shm
+!backend/data/.gitkeep
+
 # IDE
 .idea/
 *.iml

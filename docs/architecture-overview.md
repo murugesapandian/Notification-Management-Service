@@ -44,7 +44,7 @@ flowchart LR
         REPOS[(Spring Data JPA repositories)]
     end
 
-    DB[(PostgreSQL / H2<br/>Flyway-versioned schema)]
+    DB[(SQLite demo / H2 test / PostgreSQL prod<br/>Flyway-versioned schema)]
 
     SRC -->|POST /notifications| NC
     UI -->|GET /notifications/id, POST /acknowledge| NC
@@ -82,9 +82,40 @@ flowchart LR
 | `infrastructure` | Adapters: Spring Data repositories, channel providers (Strategy pattern), scheduled workers, config. | `domain`, `application` interfaces |
 
 This keeps the delivery-channel integrations, the scheduling mechanism, and the persistence
-technology all replaceable without touching business logic — e.g. swapping the H2/Postgres
-polling worker for a Kafka consumer only touches `infrastructure.worker` and
-`infrastructure.provider`.
+technology all replaceable without touching business logic — e.g. the three database engines
+this service runs against (SQLite by default, H2 for tests, PostgreSQL for production, see §2a)
+required zero changes to `application`, `domain`, or `api` — only `application*.yml` and one
+Maven dependency each; and swapping the polling worker for a Kafka consumer would only touch
+`infrastructure.worker` and `infrastructure.provider`.
+
+## 2a. Database choice per environment
+
+Three JDBC configurations, selected purely by Spring profile — the JPA entities, repositories,
+and Flyway migrations in `db/migration` are identical across all three:
+
+| Profile | Engine | Why |
+|---|---|---|
+| *(default)* | **SQLite**, file-based (`backend/data/nms.db`) | Demo/local default. Zero external service to install, yet — unlike H2's in-memory default — data survives an app restart, so a reviewer can stop/start the app or open the `.db` file in any SQLite browser and still see prior submissions. Chosen when this was reprioritized from H2 specifically for demo purposes; see commit history. |
+| `test` | **H2**, in-memory, Postgres-compatible mode | Fast, fully isolated per test context (`jdbc:h2:mem:nms-test-${random.uuid}`), zero setup for CI. Kept on H2 rather than moved to SQLite so the well-covered existing test suite (76 tests) stayed untouched by this change — a deliberately conservative choice, not an oversight. |
+| `postgres` | **PostgreSQL** | The production target. Real row-level locking (`SELECT ... FOR UPDATE`), proper `UUID`/`TIMESTAMPTZ` types, horizontal scale-out story. See `application-postgres.yml`. |
+
+**Trade-offs accepted for the SQLite default, deliberately, not by oversight:**
+
+- `spring.jpa.hibernate.ddl-auto` is `none` for this profile only (`validate` everywhere else).
+  SQLite's dynamic column typing makes Hibernate's schema validator report false-positive
+  mismatches against a schema that Flyway actually built correctly; validation would fail the
+  app at startup for no real defect. Flyway remains the single source of truth for the schema in
+  every profile — this only turns off Hibernate's *redundant* second check for this one profile.
+- SQLite does not support row-level locking (`SELECT ... FOR UPDATE` is accepted but a no-op
+  under Hibernate's community dialect). This does **not** reopen the double-processing risk
+  `DeliveryDispatcher.claimDueBatch()` is designed to close (section 4.4): SQLite serializes all
+  writers at the whole-database-file level by default, so two concurrent claim transactions still
+  cannot both succeed against the same row — the safety property holds, just via coarser-grained
+  locking than Postgres's, which caps this profile to a single writer at a time (fine for a demo,
+  not for horizontal scale-out — that's what the `postgres` profile is for).
+- `foreign_keys=on` is set explicitly on the JDBC URL — SQLite disables foreign-key enforcement
+  (and therefore `ON DELETE CASCADE`) per-connection by default, which the other two engines
+  don't require.
 
 ## 3. Data model (ER diagram)
 

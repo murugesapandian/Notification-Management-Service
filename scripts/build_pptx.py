@@ -354,7 +354,7 @@ box_shape(s, Inches(0.6), Inches(1.6), Inches(6.0), Inches(4.95), fill=LIGHT_BG)
 textbox(s, Inches(0.85), Inches(1.8), Inches(5.5), Inches(0.3), "Tech stack", size=13, bold=True, color=NAVY)
 stack_rows = [
     ("Backend", "Java 17, Spring Boot 3.3.4 (Web, Data JPA, Validation, Actuator)"),
-    ("Database", "H2 (dev/test, Postgres-compatible mode) / PostgreSQL (prod profile)"),
+    ("Database", "SQLite (demo, file-based) / H2 (test) / PostgreSQL (prod profile)"),
     ("Migrations", "Flyway, versioned (V1 greenfield, V2 brownfield, V3 ambiguous)"),
     ("Patterns", "Hexagonal layering, Strategy (ChannelProvider), Registry"),
     ("API docs", "springdoc-openapi / Swagger UI"),
