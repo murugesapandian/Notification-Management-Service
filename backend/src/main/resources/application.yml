@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: notification-management-service
+
+  datasource:
+    url: jdbc:h2:mem:nms;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+nms:
+  worker:
+    poll-interval-ms: 2000
+  escalation:
+    poll-interval-ms: 30000
+    unacknowledged-critical-threshold-minutes: 15
+    escalation-recipient-id: oncall-escalation-group
+    escalation-channel: SLACK
+
+logging:
+  level:
+    com.schwab.nms: INFO

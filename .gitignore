@@ -1,0 +1,30 @@
+# Java / Maven
+backend/target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Node / frontend (frontend is its own repo but keep this in case files are copied here)
+node_modules/
+dist/
+build/
+.env
+.env.local
+
+# Python (pptx generation helper)
+__pycache__/
+*.pyc
