@@ -362,4 +362,8 @@ Two independent boundaries, both required by section 4.4:
   deterministically; see `docs/testing-strategy.md`.
 
 These are called out explicitly rather than silently absent — see
-`docs/testing-strategy.md` for the full limitations/trade-offs list.
+`docs/testing-strategy.md` for the full limitations/trade-offs list, and
+`docs/ai-usage.md` §2 for where agentic AI specifically (escalation summarization, a
+natural-language submission front door, failure-pattern triage) could extend this system next —
+deliberately kept off the deterministic critical path (routing/retry/dedup) and out of this
+build's scope, but designed around, not ignored.

@@ -14,6 +14,7 @@ and an ambiguous requirement.
 | Understand the architecture | [`docs/architecture-overview.md`](docs/architecture-overview.md) |
 | See how each scenario was decomposed/executed/validated | [`docs/scenarios/`](docs/scenarios/) |
 | Understand testing approach, coverage, and limitations | [`docs/testing-strategy.md`](docs/testing-strategy.md) |
+| See exactly where/why AI was used, and where it could extend the system next | [`docs/ai-usage.md`](docs/ai-usage.md) |
 | See the UI | [`../notification-management-ui`](../notification-management-ui) (separate repo) |
 | See the slide overview | [`docs/Notification-Management-Service-Overview.pptx`](docs/Notification-Management-Service-Overview.pptx) |
 
