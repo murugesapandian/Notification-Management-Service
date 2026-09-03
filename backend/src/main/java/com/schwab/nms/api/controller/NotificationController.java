@@ -1,9 +1,11 @@
 package com.schwab.nms.api.controller;
 
 import com.schwab.nms.api.dto.AcknowledgeRequest;
+import com.schwab.nms.api.dto.NotificationListResponse;
 import com.schwab.nms.api.dto.NotificationRequest;
 import com.schwab.nms.api.dto.NotificationResponse;
 import com.schwab.nms.api.dto.NotificationStatusResponse;
+import com.schwab.nms.api.dto.NotificationSummaryDto;
 import com.schwab.nms.application.AcknowledgementService;
 import com.schwab.nms.application.NotificationStatusService;
 import com.schwab.nms.application.NotificationSubmissionResult;
@@ -12,6 +14,7 @@ import com.schwab.nms.application.command.SubmitNotificationCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -67,6 +70,19 @@ public class NotificationController {
         return ResponseEntity.status(status)
                 .location(URI.create("/api/v1/notifications/" + result.notification().getId()))
                 .body(body);
+    }
+
+    @GetMapping
+    @Operation(summary = "List recent notifications",
+            description = "Backs the demo UI's dashboard view; not part of section 4's spec.")
+    public ResponseEntity<NotificationListResponse> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<com.schwab.nms.domain.model.Notification> result = statusService.list(page, size);
+        List<NotificationSummaryDto> items = result.getContent().stream()
+                .map(NotificationSummaryDto::from)
+                .toList();
+        return ResponseEntity.ok(new NotificationListResponse(items, page, size, result.getTotalElements()));
     }
 
     @GetMapping("/{notificationId}")

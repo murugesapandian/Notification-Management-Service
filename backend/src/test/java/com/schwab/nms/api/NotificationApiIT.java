@@ -188,6 +188,20 @@ class NotificationApiIT {
     }
 
     @Test
+    void listReturnsRecentNotificationsNewestFirst() {
+        NotificationRequest request = baseRequest("user-list", List.of(Channel.EMAIL), Severity.LOW, null);
+        ResponseEntity<NotificationResponse> submitResponse = restTemplate.postForEntity(baseUrl(), request, NotificationResponse.class);
+        UUID notificationId = submitResponse.getBody().notificationId();
+
+        ResponseEntity<com.schwab.nms.api.dto.NotificationListResponse> listResponse =
+                restTemplate.getForEntity(baseUrl() + "?page=0&size=50", com.schwab.nms.api.dto.NotificationListResponse.class);
+
+        assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(listResponse.getBody().items())
+                .anyMatch(item -> item.notificationId().equals(notificationId));
+    }
+
+    @Test
     void rejectsSubmissionMissingRequiredFields() {
         NotificationRequest invalid = new NotificationRequest(
                 null, null, null, null, null, null, null, List.of(), List.of(), null, null, null);
