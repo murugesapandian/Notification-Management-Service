@@ -99,6 +99,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- Lets the integration-test JVM record coverage too (see the jacoco
+                         prepare-agent-integration execution below), so NotificationApiIT's
+                         exercise of the controller/exception-handler layer is actually
+                         counted instead of showing as a false 0% gap. -->
+                    <argLine>@{failsafeArgLine}</argLine>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -116,10 +123,22 @@
                     <execution>
                         <id>prepare-agent</id>
                         <goals><goal>prepare-agent</goal></goals>
+                        <configuration>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>prepare-agent-integration</id>
+                        <phase>pre-integration-test</phase>
+                        <goals><goal>prepare-agent-integration</goal></goals>
+                        <configuration>
+                            <destFile>${project.build.directory}/jacoco.exec</destFile>
+                            <propertyName>failsafeArgLine</propertyName>
+                        </configuration>
                     </execution>
                     <execution>
                         <id>report</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals><goal>report</goal></goals>
                     </execution>
                     <execution>
