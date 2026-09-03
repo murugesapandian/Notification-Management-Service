@@ -4,16 +4,13 @@ import com.schwab.nms.application.AuditService;
 import com.schwab.nms.application.NotificationStatusAggregator;
 import com.schwab.nms.application.RetryPolicy;
 import com.schwab.nms.domain.enums.AuditAction;
-import com.schwab.nms.domain.enums.Channel;
 import com.schwab.nms.domain.enums.DeliveryStatus;
 import com.schwab.nms.domain.model.DeliveryAttempt;
 import com.schwab.nms.infrastructure.persistence.repository.DeliveryAttemptRepository;
 import com.schwab.nms.infrastructure.provider.ChannelProvider;
+import com.schwab.nms.infrastructure.provider.ChannelProviderRegistry;
 import com.schwab.nms.infrastructure.provider.DeliveryContext;
-import com.schwab.nms.infrastructure.provider.EmailChannelProvider;
 import com.schwab.nms.infrastructure.provider.ProviderResult;
-import com.schwab.nms.infrastructure.provider.PushChannelProvider;
-import com.schwab.nms.infrastructure.provider.SmsChannelProvider;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,26 +46,20 @@ public class DeliveryDispatcher {
     private static final int BATCH_SIZE = 20;
 
     private final DeliveryAttemptRepository deliveryAttemptRepository;
-    private final EmailChannelProvider emailChannelProvider;
-    private final SmsChannelProvider smsChannelProvider;
-    private final PushChannelProvider pushChannelProvider;
+    private final ChannelProviderRegistry channelProviderRegistry;
     private final RetryPolicy retryPolicy;
     private final AuditService auditService;
     private final NotificationStatusAggregator statusAggregator;
     private final Clock clock;
 
     public DeliveryDispatcher(DeliveryAttemptRepository deliveryAttemptRepository,
-                               EmailChannelProvider emailChannelProvider,
-                               SmsChannelProvider smsChannelProvider,
-                               PushChannelProvider pushChannelProvider,
+                               ChannelProviderRegistry channelProviderRegistry,
                                RetryPolicy retryPolicy,
                                AuditService auditService,
                                NotificationStatusAggregator statusAggregator,
                                Clock clock) {
         this.deliveryAttemptRepository = deliveryAttemptRepository;
-        this.emailChannelProvider = emailChannelProvider;
-        this.smsChannelProvider = smsChannelProvider;
-        this.pushChannelProvider = pushChannelProvider;
+        this.channelProviderRegistry = channelProviderRegistry;
         this.retryPolicy = retryPolicy;
         this.auditService = auditService;
         this.statusAggregator = statusAggregator;
@@ -102,7 +93,7 @@ public class DeliveryDispatcher {
             return;
         }
 
-        ChannelProvider provider = resolveProvider(attempt.getChannel());
+        ChannelProvider provider = channelProviderRegistry.resolve(attempt.getChannel());
         DeliveryContext context = new DeliveryContext(
                 attempt.getNotificationId(), attempt.getId(), attempt.getRecipientId(),
                 attempt.getRecipientType(), null, null, attempt.getAttemptCount());
@@ -148,14 +139,4 @@ public class DeliveryDispatcher {
         }
     }
 
-    private ChannelProvider resolveProvider(Channel channel) {
-        if (channel == Channel.EMAIL) {
-            return emailChannelProvider;
-        } else if (channel == Channel.SMS) {
-            return smsChannelProvider;
-        } else if (channel == Channel.PUSH) {
-            return pushChannelProvider;
-        }
-        throw new IllegalStateException("No provider configured for channel " + channel);
-    }
 }

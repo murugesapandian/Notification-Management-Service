@@ -9,8 +9,10 @@ import com.schwab.nms.domain.enums.FailureCategory;
 import com.schwab.nms.domain.enums.RecipientType;
 import com.schwab.nms.domain.model.DeliveryAttempt;
 import com.schwab.nms.infrastructure.persistence.repository.DeliveryAttemptRepository;
+import com.schwab.nms.infrastructure.provider.ChannelProviderRegistry;
 import com.schwab.nms.infrastructure.provider.EmailChannelProvider;
 import com.schwab.nms.infrastructure.provider.PushChannelProvider;
+import com.schwab.nms.infrastructure.provider.SlackChannelProvider;
 import com.schwab.nms.infrastructure.provider.SmsChannelProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,8 +50,10 @@ class DeliveryDispatcherTest {
     @BeforeEach
     void setUp() {
         Clock fixed = Clock.fixed(now, ZoneOffset.UTC);
-        dispatcher = new DeliveryDispatcher(deliveryAttemptRepository,
+        ChannelProviderRegistry registry = new ChannelProviderRegistry(List.of(
                 new EmailChannelProvider(), new SmsChannelProvider(), new PushChannelProvider(),
+                new SlackChannelProvider()));
+        dispatcher = new DeliveryDispatcher(deliveryAttemptRepository, registry,
                 new RetryPolicy(30, 900), auditService, statusAggregator, fixed);
         lenient().when(deliveryAttemptRepository.save(any(DeliveryAttempt.class))).thenAnswer(inv -> inv.getArgument(0));
     }

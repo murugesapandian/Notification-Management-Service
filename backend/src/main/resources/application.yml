@@ -48,6 +48,11 @@ springdoc:
 nms:
   worker:
     poll-interval-ms: 2000
+  retry:
+    base-delay-seconds: 30
+    max-delay-seconds: 900
+  idempotency:
+    cleanup-interval-ms: 3600000
   escalation:
     poll-interval-ms: 30000
     unacknowledged-critical-threshold-minutes: 15

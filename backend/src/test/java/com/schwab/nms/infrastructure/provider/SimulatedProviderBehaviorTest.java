@@ -79,5 +79,13 @@ class SimulatedProviderBehaviorTest {
         assertThat(provider.supportedChannel()).isEqualTo(Channel.EMAIL);
         assertThat(new SmsChannelProvider().supportedChannel()).isEqualTo(Channel.SMS);
         assertThat(new PushChannelProvider().supportedChannel()).isEqualTo(Channel.PUSH);
+        assertThat(new SlackChannelProvider().supportedChannel()).isEqualTo(Channel.SLACK);
+    }
+
+    @Test
+    void slackProviderFollowsTheSameSimulationRulesAsOtherChannels() {
+        SlackChannelProvider slack = new SlackChannelProvider();
+        ProviderResult result = slack.send(ctx("invalid-user", 1));
+        assertThat(result.failureCategory()).isEqualTo(FailureCategory.INVALID_RECIPIENT);
     }
 }

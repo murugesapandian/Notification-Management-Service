@@ -132,6 +132,21 @@ class NotificationApiIT {
     }
 
     @Test
+    void deliversToSlackChannelAddedByTheBrownfieldScenario() {
+        NotificationRequest request = baseRequest("user-slack", List.of(Channel.SLACK), Severity.MEDIUM, null);
+
+        ResponseEntity<NotificationResponse> submitResponse = restTemplate.postForEntity(baseUrl(), request, NotificationResponse.class);
+        UUID notificationId = submitResponse.getBody().notificationId();
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ResponseEntity<NotificationStatusResponse> statusResponse =
+                    restTemplate.getForEntity(baseUrl() + "/" + notificationId, NotificationStatusResponse.class);
+            assertThat(statusResponse.getBody().overallStatus()).isEqualTo(NotificationStatus.DELIVERED);
+            assertThat(statusResponse.getBody().selectedChannels()).containsExactly(Channel.SLACK);
+        });
+    }
+
+    @Test
     void rejectsSubmissionMissingRequiredFields() {
         NotificationRequest invalid = new NotificationRequest(
                 null, null, null, null, null, null, null, List.of(), List.of(), null, null, null);
