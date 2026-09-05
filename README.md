@@ -11,7 +11,7 @@ and an ambiguous requirement.
 | I want to... | Go to |
 |---|---|
 | Run it | [`EXECUTION_GUIDE.md`](EXECUTION_GUIDE.md) |
-| Understand the architecture | [`docs/architecture-overview.md`](docs/architecture-overview.md) |
+| Understand the architecture | [`docs/architecture-overview.md`](docs/architecture-overview.md) (or the formatted [PDF](docs/NMS-Architecture-Overview.pdf)) |
 | See how each scenario was decomposed/executed/validated | [`docs/scenarios/`](docs/scenarios/) |
 | Understand testing approach, coverage, and limitations | [`docs/testing-strategy.md`](docs/testing-strategy.md) |
 | See exactly where/why AI was used, and where it could extend the system next | [`docs/ai-usage.md`](docs/ai-usage.md) |
