@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Brownfield addition (docs/scenarios/02-brownfield.md): enforces the retention
@@ -25,6 +24,14 @@ import java.util.List;
  * A single scheduled method calling the repository directly has no self-invocation
  * proxy hazard (contrast with DeliveryDispatcher's javadoc), so no extra bean split
  * is needed here.
+ *
+ * Deletion is a single bulk statement ({@code deleteByExpiresAtBefore}), not the
+ * earlier find-all-then-deleteAll — that pattern loaded every expired row into a
+ * Java List and the persistence context before removing them one at a time, which
+ * would spike heap usage in direct proportion to backlog size if this job were ever
+ * disabled for a while (or the interval set very long) and let a large backlog
+ * accumulate. Found during a resource-usage review, not exercised by tests since it
+ * required a large backlog to reproduce — fixed at the source instead.
  */
 @Component
 public class IdempotencyCleanupJob {
@@ -42,11 +49,9 @@ public class IdempotencyCleanupJob {
     @Scheduled(fixedDelayString = "${nms.idempotency.cleanup-interval-ms:3600000}")
     @Transactional
     public void purgeExpired() {
-        List<IdempotencyRecord> expired = idempotencyRecordRepository.findByExpiresAtBefore(Instant.now(clock));
-        if (expired.isEmpty()) {
-            return;
+        int purged = idempotencyRecordRepository.deleteByExpiresAtBefore(Instant.now(clock));
+        if (purged > 0) {
+            log.info("Purged {} expired idempotency record(s)", purged);
         }
-        idempotencyRecordRepository.deleteAll(expired);
-        log.info("Purged {} expired idempotency record(s)", expired.size());
     }
 }

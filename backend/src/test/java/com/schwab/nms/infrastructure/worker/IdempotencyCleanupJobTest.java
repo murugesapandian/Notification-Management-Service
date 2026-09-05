@@ -1,6 +1,5 @@
 package com.schwab.nms.infrastructure.worker;
 
-import com.schwab.nms.domain.model.IdempotencyRecord;
 import com.schwab.nms.infrastructure.persistence.repository.IdempotencyRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,12 +10,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
-import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,24 +30,20 @@ class IdempotencyCleanupJobTest {
     }
 
     @Test
-    void purgesRecordsPastTheirRetentionWindow() {
-        List<IdempotencyRecord> expired = List.of(
-                IdempotencyRecord.builder().id(UUID.randomUUID()).sourceSystem("src").idempotencyKey("k1")
-                        .notificationId(UUID.randomUUID()).createdAt(now.minusSeconds(700000))
-                        .expiresAt(now.minusSeconds(1)).build());
-        when(idempotencyRecordRepository.findByExpiresAtBefore(eq(now))).thenReturn(expired);
+    void purgesRecordsPastTheirRetentionWindowViaASingleBulkDelete() {
+        when(idempotencyRecordRepository.deleteByExpiresAtBefore(eq(now))).thenReturn(3);
 
         job.purgeExpired();
 
-        verify(idempotencyRecordRepository).deleteAll(expired);
+        verify(idempotencyRecordRepository).deleteByExpiresAtBefore(now);
     }
 
     @Test
-    void doesNothingWhenNothingHasExpiredYet() {
-        when(idempotencyRecordRepository.findByExpiresAtBefore(eq(now))).thenReturn(List.of());
+    void doesNothingNotableWhenNothingHasExpiredYet() {
+        when(idempotencyRecordRepository.deleteByExpiresAtBefore(eq(now))).thenReturn(0);
 
         job.purgeExpired();
 
-        verify(idempotencyRecordRepository, never()).deleteAll(any());
+        verify(idempotencyRecordRepository).deleteByExpiresAtBefore(now);
     }
 }

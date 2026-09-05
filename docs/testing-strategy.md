@@ -93,6 +93,63 @@ than being pro forma:
    to contention (see `docs/scenarios/03-ambiguous-requirements.md` for the full account) rather
    than papering over it with a longer test timeout.
 
+## Security review
+
+A dependency-CVE and code-level review, done deliberately rather than assumed clean. Real
+findings were fixed; non-findings are recorded with the reasoning, not silently dropped.
+
+**Dependency CVEs — checked against Maven Central directly, not just a version-checker tool**
+(one source claimed newer 3.3.x Spring Boot versions exist than are actually published publicly
+— those turned out to be a paid vendor's back-ported builds):
+
+| Dependency | Was | Now | Why |
+|---|---|---|---|
+| `spring-boot-starter-parent` | 3.3.4 | **3.3.13** | Fixes CVE-2025-41249, CVE-2025-22233, CVE-2025-41234, accumulated across 9 patch releases. 3.3.13 is the actual latest public release on Maven Central for the 3.3.x line. |
+| `org.postgresql:postgresql` | 42.7.4 | **42.7.13** | Same minor line, latest patch. |
+| `org.xerial:sqlite-jdbc` | 3.46.1.3 | **3.53.4.0** | Actively used at runtime (the demo/dev default profile) — bumped for accumulated fixes in both the JDBC wrapper and bundled native SQLite. Re-verified the full submit→retry→deliver flow against a fresh SQLite file post-bump, since the test suite runs on H2 and never exercises this driver at all. |
+| `org.projectlombok:lombok` | 1.18.34 | **1.18.48** | Compile-time only (excluded from the runtime jar), low risk, bumped for freshness. |
+| `com.h2database:h2` | 2.2.224 | **left as-is** | A real CVE class exists for H2 (JDBC-URL-parameter RCE via `INIT`/`RUNSCRIPT`), but it requires an attacker to control the JDBC connection string. Ours is fully hardcoded in `application-test.yml` with only a framework-generated UUID as the dynamic part — no request ever reaches it. H2 console is also not enabled anywhere in this codebase (confirmed by grep), closing the other well-known H2 attack vector regardless of version. Upgrading across H2 minor versions (2.2→2.5) carries its own regression risk to the `MODE=PostgreSQL` compatibility the test suite depends on, for a vulnerability class that isn't reachable here — left alone and documented, not overlooked. |
+| `org.flywaydb:flyway-core` / `flyway-database-postgresql` | 10.10.0 | **left as-is** | 10.10.0 is the last release in the 10.x line (confirmed against Maven Central metadata — there is no smaller patch bump available); the next version is 12.x, a major jump with real license/behavior-change risk (Flyway's community edition has narrowed database support across major versions before). No specific CVE was found motivating this jump. Treated as a deferred, dedicated migration, not folded into this pass. |
+| `org.springdoc:springdoc-openapi-starter-webmvc-ui` | 2.6.0 | **left as-is** | Tried bumping to 2.9.0 for freshness — broke with `NoClassDefFoundError: LiteWebJarsResourceResolver`, a class from a newer Spring Framework than 3.3.x ships. Tried stepping back to 2.8.17 (still "2.x"): **same failure** — confirmed by actually running the integration suite, not assumed from the version number. No CVE motivated this bump either (the one known swagger-ui XSS CVE, webjars 3.14–3.38, was already far behind us at the bundled 5.x). Reverted. |
+| frontend (npm) | — | — | `npm audit` reports **zero vulnerabilities** at any severity across the whole dependency tree. |
+
+**Code-level review (backend):**
+
+- **SQL injection**: every `@Query` in the codebase is parameterized JPQL (`:paramName` binds);
+  none use `nativeQuery=true` or string-concatenated SQL. Clean.
+- **XSS**: React auto-escapes all rendered content; no `dangerouslySetInnerHTML`, `eval`, or
+  `innerHTML` anywhere in the frontend (grepped, not assumed).
+- **Secrets**: no hardcoded credentials/API keys found; Postgres profile reads credentials from
+  environment variables only.
+- **Error handling**: unhandled exceptions fall through to Spring Boot's secure-by-default
+  `/error` handling (`server.error.include-message`/`include-stacktrace` are not overridden, so
+  they stay at their secure default of `never`) — confirmed no override exists, rather than
+  assumed.
+- **CORS**: scoped to a configurable specific origin (`nms.cors.allowed-origins`), not `*`.
+- **Actuator**: only `health`, `info`, `metrics` are exposed — not `env`, `beans`, or other
+  internals-revealing endpoints.
+
+**Resource-usage / memory review — two real findings, fixed:**
+
+1. `IdempotencyCleanupJob` and `EscalationJob`'s eligibility query both loaded an **unbounded**
+   result set into a `List` before acting on it — `IdempotencyCleanupJob` additionally
+   materialized every expired entity into the persistence context just to call `deleteAll` on
+   them one at a time. Neither was reachable by tests (both need a large backlog to show up), so
+   this was found by reading the code with "what if this table has 100k rows" in mind, not by a
+   failing test. Fixed: `IdempotencyCleanupJob` now issues a single bulk
+   `deleteByExpiresAtBefore` statement (no entities loaded into heap at all);
+   `EscalationJob`/`NotificationRepository.findEligibleForEscalation` now takes a `Pageable` and
+   caps each poll to a fixed batch, the same pattern already used by
+   `DeliveryAttemptRepository.lockNextBatchDue` — a genuine incident storm producing many
+   CRITICAL alerts at once can no longer make one poll cycle load an unbounded list.
+2. Frontend polling (`Dashboard`, `NotificationDetail`) correctly cleared its `setInterval` on
+   unmount already, but an in-flight `fetch` at the moment of navigation would still resolve
+   later and call `setState` on an unmounted page — wasted network completions and retained
+   closures under repeated fast navigation, not a classic leak but real waste. Fixed with an
+   `AbortController` per effect, aborted in its cleanup function; verified with Playwright by
+   rapidly cycling Dashboard↔Detail navigation six times while polling was active — zero console
+   errors, and the notification still correctly reached `DELIVERED`.
+
 ## Limitations (explicit, not hidden)
 
 - **Simulated providers, not real ones.** No SES/Twilio/FCM/Slack credentials or network calls
@@ -102,9 +159,11 @@ than being pro forma:
 - **No load/performance testing.** The DB-polling worker's throughput ceiling was not measured;
   see `docs/architecture-overview.md` §6 for the known scaling trade-off and the production
   migration path (swap to a broker-driven consumer).
-- **No security testing beyond input validation.** AuthN/AuthZ is explicitly out of scope for
-  the prototype (see architecture overview §11); a real deployment sits behind the org's
-  gateway/OAuth2 resource server.
+- **No AuthN/AuthZ.** Explicitly out of scope for the prototype (see architecture overview
+  §11); a real deployment sits behind the org's gateway/OAuth2 resource server. The security
+  review above covers dependency CVEs, injection/XSS/secrets/CORS/error-handling at the code
+  level, and resource-usage patterns — it is not a penetration test, and does not substitute
+  for one before any real deployment.
 - **Concurrency testing is scenario-driven, not exhaustive.** The optimistic-lock retries were
   validated against the specific races the integration tests happened to produce (acknowledge-
   right-after-submit, escalation-right-after-submit with a near-zero threshold). No dedicated

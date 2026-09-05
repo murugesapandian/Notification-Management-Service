@@ -5,6 +5,7 @@ import com.schwab.nms.domain.model.Notification;
 import com.schwab.nms.infrastructure.persistence.repository.NotificationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,7 @@ import java.util.List;
 public class EscalationJob {
 
     private static final Logger log = LoggerFactory.getLogger(EscalationJob.class);
+    private static final int BATCH_SIZE = 200;
 
     private final NotificationRepository notificationRepository;
     private final EscalationExecutor executor;
@@ -57,7 +59,8 @@ public class EscalationJob {
     @Scheduled(fixedDelayString = "${nms.escalation.poll-interval-ms:30000}")
     public void escalateOverdueCriticalNotifications() {
         Instant cutoff = Instant.now(clock).minus(Duration.ofMinutes(properties.unacknowledgedCriticalThresholdMinutes()));
-        List<Notification> overdue = notificationRepository.findEligibleForEscalation(cutoff);
+        List<Notification> overdue = notificationRepository.findEligibleForEscalation(cutoff,
+                PageRequest.of(0, BATCH_SIZE));
 
         for (Notification notification : overdue) {
             try {

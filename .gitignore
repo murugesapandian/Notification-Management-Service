@@ -19,6 +19,9 @@ backend/data/*.db-shm
 .project
 .settings/
 
+# Local agent-harness state (not project-related)
+.claude/
+
 # OS
 .DS_Store
 

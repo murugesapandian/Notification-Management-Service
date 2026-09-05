@@ -56,7 +56,7 @@ class EscalationJobTest {
     void delegatesEachEligibleNotificationToTheExecutor() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
-        when(notificationRepository.findEligibleForEscalation(any()))
+        when(notificationRepository.findEligibleForEscalation(any(), any()))
                 .thenReturn(List.of(unacknowledgedCritical(id1), unacknowledgedCritical(id2)));
 
         job.escalateOverdueCriticalNotifications();
@@ -67,7 +67,7 @@ class EscalationJobTest {
 
     @Test
     void doesNothingWhenNoNotificationIsOverdue() {
-        when(notificationRepository.findEligibleForEscalation(any())).thenReturn(List.of());
+        when(notificationRepository.findEligibleForEscalation(any(), any())).thenReturn(List.of());
 
         job.escalateOverdueCriticalNotifications();
 
@@ -78,7 +78,7 @@ class EscalationJobTest {
     void aConcurrentUpdateConflictOnOneNotificationDoesNotStopTheRestOfTheBatch() {
         UUID conflicted = UUID.randomUUID();
         UUID healthy = UUID.randomUUID();
-        when(notificationRepository.findEligibleForEscalation(any()))
+        when(notificationRepository.findEligibleForEscalation(any(), any()))
                 .thenReturn(List.of(unacknowledgedCritical(conflicted), unacknowledgedCritical(healthy)));
         doThrow(new ObjectOptimisticLockingFailureException(Notification.class, conflicted))
                 .when(executor).escalateOne(conflicted);
