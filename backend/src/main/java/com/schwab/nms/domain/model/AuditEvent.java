@@ -43,6 +43,6 @@ public class AuditEvent {
     @Column(name = "actor", length = 100)
     private String actor;
 
-    @Column(name = "occurred_at", nullable = false)
+    @Column(name = "occurred_at", nullable = false, length = 30)
     private Instant occurredAt;
 }

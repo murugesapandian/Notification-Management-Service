@@ -42,9 +42,9 @@ public class IdempotencyRecord {
     @Column(name = "notification_id", nullable = false)
     private UUID notificationId;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, length = 30)
     private Instant createdAt;
 
-    @Column(name = "expires_at", nullable = false)
+    @Column(name = "expires_at", nullable = false, length = 30)
     private Instant expiresAt;
 }

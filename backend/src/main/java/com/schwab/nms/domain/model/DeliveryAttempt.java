@@ -78,13 +78,13 @@ public class DeliveryAttempt {
     @Column(name = "provider_message_id", length = 200)
     private String providerMessageId;
 
-    @Column(name = "next_retry_at")
+    @Column(name = "next_retry_at", length = 30)
     private Instant nextRetryAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, length = 30)
     private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at", nullable = false, length = 30)
     private Instant updatedAt;
 
     @Version

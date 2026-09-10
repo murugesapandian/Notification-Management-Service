@@ -11,13 +11,13 @@ CREATE TABLE notifications (
     body                VARCHAR(4000),
     idempotency_key     VARCHAR(200),
     overall_status      VARCHAR(30)   NOT NULL,
-    created_at          TIMESTAMP     NOT NULL,
-    updated_at          TIMESTAMP     NOT NULL,
-    scheduled_at        TIMESTAMP,
-    expires_at          TIMESTAMP,
-    acknowledged_at     TIMESTAMP,
+    created_at          VARCHAR(30)   NOT NULL,
+    updated_at          VARCHAR(30)   NOT NULL,
+    scheduled_at        VARCHAR(30),
+    expires_at          VARCHAR(30),
+    acknowledged_at     VARCHAR(30),
     acknowledged_by     VARCHAR(100),
-    escalated_at        TIMESTAMP,
+    escalated_at        VARCHAR(30),
     version             BIGINT
 );
 
@@ -54,9 +54,9 @@ CREATE TABLE delivery_attempts (
     last_failure_category      VARCHAR(40),
     last_error_message         VARCHAR(500),
     provider_message_id        VARCHAR(200),
-    next_retry_at              TIMESTAMP,
-    created_at                TIMESTAMP NOT NULL,
-    updated_at                TIMESTAMP NOT NULL,
+    next_retry_at              VARCHAR(30),
+    created_at                VARCHAR(30) NOT NULL,
+    updated_at                VARCHAR(30) NOT NULL,
     version                  BIGINT,
     CONSTRAINT uq_delivery_unit UNIQUE (notification_id, recipient_id, channel)
 );
@@ -72,7 +72,7 @@ CREATE TABLE routing_decisions (
     requested_channel    VARCHAR(20),
     resolved_channel     VARCHAR(20) NOT NULL,
     reason             VARCHAR(300) NOT NULL,
-    decided_at          TIMESTAMP NOT NULL
+    decided_at          VARCHAR(30) NOT NULL
 );
 
 CREATE INDEX idx_routing_notification ON routing_decisions (notification_id);
@@ -83,7 +83,7 @@ CREATE TABLE audit_events (
     action            VARCHAR(40) NOT NULL,
     detail            VARCHAR(1000),
     actor             VARCHAR(100),
-    occurred_at        TIMESTAMP NOT NULL
+    occurred_at        VARCHAR(30) NOT NULL
 );
 
 CREATE INDEX idx_audit_notification ON audit_events (notification_id);
@@ -93,8 +93,8 @@ CREATE TABLE idempotency_records (
     source_system      VARCHAR(100) NOT NULL,
     idempotency_key     VARCHAR(200) NOT NULL,
     notification_id     UUID NOT NULL,
-    created_at         TIMESTAMP NOT NULL,
-    expires_at         TIMESTAMP NOT NULL,
+    created_at         VARCHAR(30) NOT NULL,
+    expires_at         VARCHAR(30) NOT NULL,
     CONSTRAINT uq_idem_source_key UNIQUE (source_system, idempotency_key)
 );
 

@@ -43,6 +43,6 @@ public class RoutingDecision {
     @Column(name = "reason", nullable = false, length = 300)
     private String reason;
 
-    @Column(name = "decided_at", nullable = false)
+    @Column(name = "decided_at", nullable = false, length = 30)
     private Instant decidedAt;
 }

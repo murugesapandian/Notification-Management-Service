@@ -68,25 +68,25 @@ public class Notification {
     @Column(name = "overall_status", nullable = false, length = 30)
     private NotificationStatus overallStatus;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, length = 30)
     private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at", nullable = false, length = 30)
     private Instant updatedAt;
 
-    @Column(name = "scheduled_at")
+    @Column(name = "scheduled_at", length = 30)
     private Instant scheduledAt;
 
-    @Column(name = "expires_at")
+    @Column(name = "expires_at", length = 30)
     private Instant expiresAt;
 
-    @Column(name = "acknowledged_at")
+    @Column(name = "acknowledged_at", length = 30)
     private Instant acknowledgedAt;
 
     @Column(name = "acknowledged_by", length = 100)
     private String acknowledgedBy;
 
-    @Column(name = "escalated_at")
+    @Column(name = "escalated_at", length = 30)
     private Instant escalatedAt;
 
     @Version
