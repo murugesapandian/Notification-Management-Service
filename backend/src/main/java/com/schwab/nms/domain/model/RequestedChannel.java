@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -23,7 +25,8 @@ import java.util.UUID;
 public class RequestedChannel {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "id", nullable = false, updatable = false, length = 36)
     @Builder.Default
     private UUID id = UUID.randomUUID();
 

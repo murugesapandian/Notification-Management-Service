@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -26,11 +28,13 @@ import java.util.UUID;
 public class AuditEvent {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "id", nullable = false, updatable = false, length = 36)
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
-    @Column(name = "notification_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "notification_id", nullable = false, length = 36)
     private UUID notificationId;
 
     @Enumerated(EnumType.STRING)

@@ -10,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,7 +37,8 @@ import java.util.UUID;
 public class Notification {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "id", nullable = false, updatable = false, length = 36)
     private UUID id;
 
     @Column(name = "source_system", nullable = false, length = 100)

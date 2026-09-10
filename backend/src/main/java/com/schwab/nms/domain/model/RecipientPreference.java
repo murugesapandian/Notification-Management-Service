@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -26,7 +28,8 @@ import java.util.UUID;
 public class RecipientPreference {
 
     @Id
-    @Column(name = "id", nullable = false, updatable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "id", nullable = false, updatable = false, length = 36)
     @Builder.Default
     private UUID id = UUID.randomUUID();
 
