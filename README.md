@@ -36,6 +36,47 @@ time," escalate to whom/how, does it repeat). Each is resolved and documented, n
 silently. Building it also surfaced a genuine concurrency bug (multiple background processes
 racing on the same database row), which was fixed and is documented as a finding, not hidden.
 
+## Technology stack
+
+**Backend**
+
+| Layer | Technology |
+|---|---|
+| Language / runtime | Java 17 |
+| Framework | Spring Boot 3.3 (Web, Data JPA, Validation, Actuator) |
+| Database (demo/dev) | SQLite, file-based (`backend/data/nms.db`) |
+| Database (test) | H2, in-memory (`MODE=PostgreSQL`) |
+| Database (prod) | PostgreSQL |
+| ORM | Hibernate 6, via Spring Data JPA |
+| Schema migrations | Flyway |
+| Boilerplate reduction | Lombok |
+| API documentation | springdoc-openapi (Swagger UI) |
+| Build tool | Maven |
+| Testing | JUnit 5, Mockito, AssertJ, Awaitility, Spring Boot Test, Maven Failsafe (integration tests), JaCoCo (coverage gate) |
+
+**Frontend** ([`notification-management-ui`](../notification-management-ui), separate repo)
+
+| Layer | Technology |
+|---|---|
+| Library | React 19 |
+| Language | TypeScript |
+| Build tool | Vite 8 |
+| Routing | React Router 7 |
+| Package manager | npm |
+| Linting | oxlint |
+
+**Architecture patterns**
+
+- Layered backend: `api` → `application` → `domain` → `infrastructure` (persistence, provider, worker)
+- Strategy/Registry pattern for channel providers (Email/SMS/Push/Slack) — see the
+  [brownfield scenario](docs/scenarios/02-brownfield.md)
+- Scheduled workers for delivery retry, escalation, and idempotency cleanup
+- Hibernate `@JdbcTypeCode`/`AttributeConverter` mappings so UUID and timestamp columns are
+  stored as human-readable text rather than SQLite's default binary/epoch-millis representation
+
+See [`EXECUTION_GUIDE.md`](EXECUTION_GUIDE.md) for exact versions, prerequisites, and how to run
+each profile.
+
 ## Repository layout
 
 This repo holds the backend service and documentation. The UI is intentionally a **separate
